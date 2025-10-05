@@ -1,22 +1,75 @@
-name: FastAPI CI/CD
+  - name: Set up Python
+    uses: actions/setup-python@v4
+    with:
+      python-version: '3.11'
 
-on:
-  push:
-    branches: [main]
+  - name: Install dependencies
+    # Assuming requirements.txt is in the root and contains necessary packages
+    run: pip install -r requirements.txt
 
+<<<<<<< HEAD
+  - name: Install pytest (Ensuring test runner is available)
+    # It's good practice to ensure the test runner is installed
+    run: pip install pytest 
+
+  - name: Run unit tests
+    run: pytest -v
+=======
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4 # Update to v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: '3.11' # Use string format for clarity
+>>>>>>> 2067cfd (changes_flow)
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+   # 1. Login to Docker Hub (Required for both push and pull actions)
+  - name: Login to DockerHub
+    uses: docker/login-action@v3
+    with:
+      username: ${{ secrets.DOCKERHUB_USERNAME }} # Securely uses GitHub Secret
+      password: ${{ secrets.DOCKER_PASSWORD }}    # Securely uses GitHub Secret
+  
+  # 2. Build and Push Docker image (using the recommended action)
+  - name: Build and Push Docker image
+    uses: docker/build-push-action@v5
+    with:
+      context: .                                               # Use current directory as build context
+      push: true                                               # Instructs the action to push the built image
+      tags: ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:latest # Uses the secret for the correct image tag
+
+<<<<<<< HEAD
+  # 3. Set up SSH Key for secure deployment (using the recommended action)
+  - name: Set up SSH Key
+    uses: webfactory/ssh-agent@v0.9.1
+    with:
+      # This key is used to authenticate with your remote server
+      ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }} 
+
+  # 4. Deploy to server
+  - name: Deploy to server
+    run: |
+      # Define the full image tag locally for use in the SSH command
+      IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:latest"
+      
+      # SSH into the server, pull the latest image, and restart the containers
+      # using docker-compose.
+      ssh -o StrictHostKeyChecking=no myuser@myserver "
+        echo 'Deployment started...' &&
+        # 1. Pull the new image
+        docker pull $IMAGE_TAG && 
+        # 2. Restart services defined in the docker-compose.yml on the server
+        #    (Assumes docker-compose.yml is configured to use the 'fastapi-crud:latest' tag)
+        docker-compose up -d && 
+        echo 'Deployment finished successfully.'
+      "
+=======
+      - name: Install pytest (if not in requirements.txt)
+        run: pip install pytest # Ensure pytest is available
 
       - name: Run unit tests
         run: pytest -v
@@ -25,20 +78,40 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4 # Update to v4
 
+      # 1. Login to Docker Hub
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3 # Use v3 for latest version
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }} # Use secret for username
           password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      # 2. Build and Push Docker image (combined for efficiency)
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v5 # Use a recent version
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:latest # Use secret for tag
 
-      - name: Build Docker image
-        run: docker build -t myusername/fastapi-crud:latest .
+      # 3. Set up SSH Key for secure deployment
+      - name: Set up SSH Key
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }} # Secret for your server's private key
 
-      - name: Push Docker image
-        run: docker push myusername/fastapi-crud:latest
-
+      # 4. Deploy to server
       - name: Deploy to server
         run: |
-          ssh myuser@myserver "docker pull myusername/fastapi-crud:latest && docker-compose up -d"
+          # Use a variable for the image tag for consistency
+          IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:latest"
+          
+          # Use SSH and pull/restart the container
+          # StrictHostKeyChecking=no is used for non-interactive systems, 
+          # but is less secure than pre-adding the host key.
+          ssh -o StrictHostKeyChecking=no myuser@myserver "
+            docker pull $IMAGE_TAG && 
+            docker-compose up -d
+          "
+>>>>>>> 2067cfd (changes_flow)

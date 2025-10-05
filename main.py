@@ -33,6 +33,10 @@ def create_item(item: ItemCreate, db: Session = Depends(get_db)):
     db.refresh(db_item)
     return db_item
 
+@app.post("/check")
+def hello_word():
+    return "hello_world"
+
 # Read all
 @app.get("/items/", response_model=List[ItemResponse])
 def read_items(db: Session = Depends(get_db)):
